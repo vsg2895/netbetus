@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" preserveAspectRatio="none">
+  <!-- NetBetUS bonus backdrop: the page navy with one red glow from the top
+       centre, the hero's own treatment. Replaces the sibling sites' webp. -->
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#202838"/>
+      <stop offset="1" stop-color="#1b2230"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="600" cy="-40" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e23b4a" stop-opacity="0.34"/>
+      <stop offset="0.55" stop-color="#e23b4a" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#e23b4a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#base)"/>
+  <rect width="1200" height="675" fill="url(#glow)"/>
+</svg>
