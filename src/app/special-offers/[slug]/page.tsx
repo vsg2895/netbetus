@@ -96,10 +96,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
        * category links are still worth following.
        *
        * The same flag filters the sitemap, so the two can never disagree.
+       *
+       * An EXPIRED offer joins the editorial gate, as on winpalack: it is
+       * already gone from every listing, and left `index` it stayed in search
+       * as a bonus nobody can claim. `follow` stays: the casino is still worth
+       * a link.
        */
       ...(!offer.active
         ? { robots: { index: false, follow: false } }
-        : offer.is_indexable === false
+        : offer.is_indexable === false || offer.terms?.expired === true
           ? { robots: { index: false, follow: true } }
           : {}),
     }
@@ -194,35 +199,22 @@ export default async function SpecialOfferDetailPage({ params }: Props) {
             <span className="font-medium text-ink">{offer.title}</span>
           </nav>
 
-          {/* The artwork alone — NO shared backdrop here, deliberately.
-              The backdrop exists to make a GRID of bonus cards read as one set;
-              this page shows a single bonus at full width, where there is no set
-              to belong to. The ink ground stays, so the artwork sits on the same
-              colour it did on the card that led here, and a banner drawn for a
-              dark surround is not suddenly on cream. */}
-          {banner ? (
-            <div className="relative aspect-[16/6] overflow-hidden rounded-[20px] bg-night">
+          {/* The artwork alone, laid out as on winpalack: full width, the
+              whole banner readable (`object-contain`), and no block at all
+              when the offer has no artwork. The ground is `paper`, one step
+              off the page — the dark `night` box used before showed as a frame
+              around every banner whose shape is not exactly 16:6. */}
+          {banner && (
+            <div className="relative mb-6 aspect-[16/6] overflow-hidden rounded-[20px] bg-paper">
               <Image
                 src={banner}
                 alt={offer.title}
                 fill
                 sizes="(max-width: 1024px) 100vw, 1240px"
-                priority
+                preload
+                fetchPriority="high"
                 className="object-contain object-center"
               />
-            </div>
-          ) : (
-            /* No artwork: the offer itself becomes the banner, as the mockup
-               does — typography on the ink ground rather than an empty box. */
-            <div className="flex aspect-[16/8] items-center overflow-hidden rounded-[20px] bg-night bg-[radial-gradient(70%_100%_at_100%_0%,rgba(226,59,74,0.16),transparent_70%)] p-5 sm:aspect-[16/6] sm:p-[56px]">
-              <p className="font-display max-w-full text-[26px] font-extrabold leading-none text-white sm:max-w-[70%] sm:text-[44px]">
-                {offer.bonus_category_name && (
-                  <span className="mb-3 block text-[0.34em] font-semibold uppercase tracking-[0.16em] text-night-accent">
-                    {offer.bonus_category_name}
-                  </span>
-                )}
-                {offer.bonuses ?? offer.title}
-              </p>
             </div>
           )}
 
@@ -230,7 +222,7 @@ export default async function SpecialOfferDetailPage({ params }: Props) {
               the right: the two things a visitor came for, both above the fold
               on a desktop. Stacks in source order on a phone, where "what is
               it" still reads before "claim it". */}
-          <header className="mt-[30px] flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="font-display text-[30px] font-extrabold leading-[1.08] text-ink sm:text-[42px]">
                 {offer.title}
@@ -285,6 +277,17 @@ export default async function SpecialOfferDetailPage({ params }: Props) {
                 )
               )}
             </div>
+
+            {/* Compliance under the CTA, where winpalack carries its
+                affiliate note: read beside the button it qualifies. */}
+            <p className="text-[13px] text-muted lg:max-w-[22rem] lg:text-right">
+              18+. T&amp;Cs apply — read the full conditions on the operator&apos;s own site before
+              depositing.{' '}
+              <Link href="/responsible-gambling" className="underline underline-offset-2 hover:text-brand">
+                Play responsibly
+              </Link>
+              .
+            </p>
           </header>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-10 xl:grid-cols-[minmax(0,1fr)_26rem]">
@@ -294,40 +297,33 @@ export default async function SpecialOfferDetailPage({ params }: Props) {
                 description on a desktop. That order is the point of the
                 change — the terms used to sit below the prose, where a reader
                 deciding whether to deposit had already stopped reading. */}
-            <aside className="lg:order-2 lg:sticky lg:top-24 lg:self-start [&>section]:my-0 lg:[&_dl]:grid-cols-2">
-              {offer.terms && <BonusTerms terms={offer.terms} />}
+            {(offer.terms || offer.casino) && (
+              <aside className="lg:order-2 lg:sticky lg:top-24 lg:self-start [&>section]:my-0 lg:[&_dl]:grid-cols-2">
+                {offer.terms && <BonusTerms terms={offer.terms} />}
 
-              <p className={`text-[13px] text-muted ${offer.terms ? 'mt-3' : ''}`}>
-                18+. T&amp;Cs apply — read the full conditions on the operator&apos;s own site before
-                depositing.{' '}
-                <Link href="/responsible-gambling" className="underline underline-offset-2 hover:text-brand">
-                  Play responsibly
-                </Link>
-                .
-              </p>
-
-              {/* A card, not a bare line: beside a column of prose a lone
-                  sentence reads as a mistake. */}
-              {offer.casino && (
-                <div className="mt-4 rounded-xl border border-line bg-paper p-5 text-[15px] text-muted">
-                  <p>
-                    Offer by{' '}
+                {/* A card, not a bare line: beside a column of prose a lone
+                    sentence reads as a mistake. */}
+                {offer.casino && (
+                  <div className={`rounded-xl border border-line bg-paper p-5 text-[15px] text-muted ${offer.terms ? 'mt-4' : ''}`}>
+                    <p>
+                      Offer by{' '}
+                      <Link
+                        href={`/casinos/${offer.casino.slug}`}
+                        className="font-bold text-brand underline underline-offset-2 hover:text-brand-dark"
+                      >
+                        {offer.casino.name}
+                      </Link>
+                    </p>
                     <Link
                       href={`/casinos/${offer.casino.slug}`}
-                      className="font-bold text-brand underline underline-offset-2 hover:text-brand-dark"
+                      className="mt-3 inline-flex min-h-11 items-center font-bold text-brand underline underline-offset-4 hover:text-brand-dark"
                     >
-                      {offer.casino.name}
+                      Read the full review →
                     </Link>
-                  </p>
-                  <Link
-                    href={`/casinos/${offer.casino.slug}`}
-                    className="mt-3 inline-flex min-h-11 items-center font-bold text-brand underline underline-offset-4 hover:text-brand-dark"
-                  >
-                    Read the full review →
-                  </Link>
-                </div>
-              )}
-            </aside>
+                  </div>
+                )}
+              </aside>
+            )}
 
             {offer.description && (
               <div
